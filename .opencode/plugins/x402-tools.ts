@@ -6,19 +6,53 @@ import { config as loadEnv } from "dotenv"
 import { createWalletClient, http } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 import { base } from "viem/chains"
+import { readFile } from "fs/promises"
 
 const BASE_URL = "https://agents.402box.io"
 const X_SEARCHER_PATH = "/x_searcher"
 const FIND_PEOPLE_PATH = "/find_people"
 const TIMEOUT_MS = 300000
 
-const getPrivateKey = (): `0x${string}` => {
+const getPrivateKey = async (): Promise<`0x${string}`> => {
+  const configPath = new URL("../x402-tools.json", import.meta.url)
+  try {
+    const contents = await readFile(configPath, "utf-8")
+    const parsed = JSON.parse(contents) as { private_key?: string }
+    if (parsed.private_key) {
+      const key = parsed.private_key
+      return (key.startsWith("0x") ? key : `0x${key}`) as `0x${string}`
+    }
+  } catch (error) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error
+    }
+  }
+
   loadEnv({ path: new URL("../../.env", import.meta.url) })
   const key = process.env.X402_PRIVATE_KEY
   if (!key) {
-    throw new Error("X402_PRIVATE_KEY is required")
+    throw new Error(
+      "X402 private key missing. Set .opencode/x402-tools.json or X402_PRIVATE_KEY in .env."
+    )
   }
   return (key.startsWith("0x") ? key : `0x${key}`) as `0x${string}`
+}
+
+const createPaymentClient = (privateKey: `0x${string}`) => {
+  const account = privateKeyToAccount(privateKey)
+  const walletClient = createWalletClient({
+    account,
+    chain: base,
+    transport: http(),
+  })
+
+  return withPaymentInterceptor(
+    axios.create({
+      baseURL: BASE_URL,
+      timeout: TIMEOUT_MS,
+    }),
+    walletClient
+  )
 }
 
 export const X402ToolsPlugin: Plugin = async () => {
@@ -31,21 +65,8 @@ export const X402ToolsPlugin: Plugin = async () => {
           query: tool.schema.string(),
         },
         async execute(args) {
-          const privateKey = getPrivateKey()
-          const account = privateKeyToAccount(privateKey)
-          const walletClient = createWalletClient({
-            account,
-            chain: base,
-            transport: http(),
-          })
-
-          const client = withPaymentInterceptor(
-            axios.create({
-              baseURL: BASE_URL,
-              timeout: TIMEOUT_MS,
-            }),
-            walletClient
-          )
+          const privateKey = await getPrivateKey()
+          const client = createPaymentClient(privateKey)
 
           const response = await client.post(X_SEARCHER_PATH, {
             message: args.query,
@@ -65,21 +86,8 @@ export const X402ToolsPlugin: Plugin = async () => {
           query: tool.schema.string(),
         },
         async execute(args) {
-          const privateKey = getPrivateKey()
-          const account = privateKeyToAccount(privateKey)
-          const walletClient = createWalletClient({
-            account,
-            chain: base,
-            transport: http(),
-          })
-
-          const client = withPaymentInterceptor(
-            axios.create({
-              baseURL: BASE_URL,
-              timeout: TIMEOUT_MS,
-            }),
-            walletClient
-          )
+          const privateKey = await getPrivateKey()
+          const client = createPaymentClient(privateKey)
 
           const response = await client.post(FIND_PEOPLE_PATH, {
             message: args.query,

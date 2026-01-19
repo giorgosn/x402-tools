@@ -17,13 +17,21 @@ cd /Users/itzannet/Documents/GitHub/x402-tools-plugin/.opencode
 bun install
 ```
 
-3. Create a `.env` in the project root with your key:
+3. Create `.opencode/x402-tools.json` with your key:
+
+```json
+{
+  "private_key": "0x..."
+}
+```
+
+4. Or set it in `.env` at the project root:
 
 ```
 X402_PRIVATE_KEY=0x...
 ```
 
-4. Restart OpenCode so the plugin is loaded.
+5. Restart OpenCode so the plugin is loaded.
 
 ## Usage
 
@@ -53,5 +61,5 @@ The plugin is loaded automatically from:
 
 ## Notes
 
-- The plugin reads `X402_PRIVATE_KEY` from `.env` in the project root.
+- The plugin reads `.opencode/x402-tools.json` first, then falls back to `X402_PRIVATE_KEY` in `.env`.
 - No account address or metadata is printed; only the markdown response is returned.
