@@ -88,7 +88,7 @@ Before installing this plugin, ensure you have:
 }
 ```
 
-**OR** set it in `.env` at the project root:
+**OR** set it in `.env` at the project root works for WINDOWS systems:
 
 ```env
 X402_PRIVATE_KEY=0x...
